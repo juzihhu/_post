@@ -44,6 +44,12 @@ cover: /img/photo-1676979526732-cd3b818d3135.png
 
   ![image-20230315114100054](https://gitee.com/juzihhu/image_bed/raw/master/img/202303151937204.png)
 
+  **ubuntu的配置**
+
+  Linux安装ssh服务：sudo apt install openssh-server -y
+
+  启动ssh服务： sudo systemctl start ssh
+
   
 
 - Xshell 远程连接
@@ -707,8 +713,8 @@ int main() {
 错失败，具体取决于加锁时使用的方法*
 
 - *一旦线程锁定互斥量，随即成为该互斥量的所有者，只有所有者才能给互斥量解锁。一般情
-况下，对每一共享资源（可能由多个相关变量组成）会使用不同的互斥量，每一线程在访问
-同一资源时将采用如下协议：*
+  况下，对每一共享资源（可能由多个相关变量组成）会使用不同的互斥量，每一线程在访问
+  同一资源时将采用如下协议：*
 
    1. 针对共享资源锁定互斥量   
    2. 访问共享资源
@@ -4102,7 +4108,7 @@ HTTP/1.1 协议中共定义了八种方法（也叫“动作”）来以不同�
 5. 当主线程调用 epoll_wait 等待 socket 可写。
 6. 当 socket 可写时，epoll_wait 通知主线程。主线程将 socket 可写事件放入请求队列。
 7. 睡眠在请求队列上的某个工作线程被唤醒，它往 socket 上写入服务器处理客户请求的结果。
-  
+
 
 ![](https://gitee.com/juzihhu/image_bed/raw/master/img/202303082245057.png)
 
@@ -4121,7 +4127,7 @@ HTTP/1.1 协议中共定义了八种方法（也叫“动作”）来以不同�
 5. 主线程继续处理其他逻辑。
 6. 当用户缓冲区的数据被写入 socket 之后，内核将向应用程序发送一个信号，以通知应用程序数据已经发送完毕。
 7. 应用程序预先定义好的信号处理函数选择一个工作线程来做善后处理，比如决定是否关闭 socket。
-  
+
 
 ![](https://gitee.com/juzihhu/image_bed/raw/master/img/202303082245058.png)
 
@@ -4137,7 +4143,7 @@ HTTP/1.1 协议中共定义了八种方法（也叫“动作”）来以不同�
 4. 睡眠在请求队列上的某个工作线程被唤醒，它获得请求对象并处理客户请求，然后往 epoll 内核事件表中注册 socket 上的写就绪事件。
 5. 主线程调用 epoll_wait 等待 socket 可写。
 6. 当 socket 可写时，epoll_wait 通知主线程。主线程往 socket 上写入服务器处理客户请求的结果。
-  
+
 
 ![](https://gitee.com/juzihhu/image_bed/raw/master/img/202303082245059.png)
 
