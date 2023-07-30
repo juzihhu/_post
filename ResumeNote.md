@@ -2208,6 +2208,91 @@ double NtSqrt(const double num){
 }
 ```
 
+### LRU缓存算法
+
+```cpp
+// 实现双向链表结构
+struct DLinkedNode{
+    int key,value;
+    DLinkedNode* pre,*next;
+    DLinkedNode():key(0),value(0),pre(nullptr),next(nullptr){}
+    DLinkedNode(int k,int y):key(k),value(y),pre(nullptr),next(nullptr){}
+};
+class LRUCache {
+private:
+    unordered_map<int,DLinkedNode*> mapCache;
+    DLinkedNode* head;
+    DLinkedNode* tail;
+    int size;
+    int capacity;
+public:
+    LRUCache(int capacity) {
+        this->capacity=capacity;
+        size=0;
+        // 虚拟头节点和尾节点
+        head=new DLinkedNode();
+        tail= new DLinkedNode();
+        head->next=tail;
+        tail->pre=head;
+    }
+
+    void addToHead(DLinkedNode* node){
+        node->pre=head;
+        node->next=head->next;
+        head->next->pre=node;
+        head->next=node;
+    }
+
+    void removeNode(DLinkedNode* node){
+        node->pre->next=node->next;
+        node->next->pre=node->pre;
+    }
+
+    void moveToHead(DLinkedNode* node){
+        removeNode(node);
+        addToHead(node);
+    }
+    DLinkedNode* removeTail(){
+        DLinkedNode* node = tail->pre;
+        removeNode(node);
+        return node;
+    }
+    int get(int key) {
+        if(mapCache.find(key)==mapCache.end()) return -1;
+        DLinkedNode* node=mapCache[key];
+        moveToHead(node);
+        return node->value;
+    }
+    
+    void put(int key, int value) {
+        if(mapCache.find(key)==mapCache.end()){
+            DLinkedNode* node = new DLinkedNode(key,value);
+            mapCache[key]=node;
+            addToHead(node);
+            ++size;
+            if(size>capacity){
+                DLinkedNode* removed = removeTail();
+                mapCache.erase(removed->key);
+                --size;
+            }
+        }
+        else{
+            DLinkedNode* node=mapCache[key];
+            node->value=value;
+            moveToHead(node);
+        }
+        
+    }
+};
+
+/**
+ * Your LRUCache object will be instantiated and called as such:
+ * LRUCache* obj = new LRUCache(capacity);
+ * int param_1 = obj->get(key);
+ * obj->put(key,value);
+ */
+```
+
 
 
 ## 六、项目
