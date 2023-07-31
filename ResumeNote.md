@@ -2293,6 +2293,135 @@ public:
  */
 ```
 
+### 快排；稳定版本快排；三路快排；
+
+```cpp
+int pivot(std::vector<int>& nums, int left, int right); // 普通快速排序
+int pivot_stable(std::vector<int>& nums, int left, int right); // 稳定的快速排序
+std::pair<int, int> pivot_three(std::vector<int>& nums, int left, int right); // 三路归并
+v
+    oid quickSort(std::vector<int>& nums, int left, int right)
+{
+    if (left >= right)
+        return;
+    // int piv = pivot(nums, left, right);
+    // int piv = pivot_stable(nums, left, right);
+
+    // quickSort(nums, left, piv - 1);
+    // quickSort(nums, piv + 1, right);
+    std::pair<int, int> piv = pivot_three(nums, left, right);
+    quickSort(nums, left, piv.first - 1);
+    quickSort(nums, piv.second + 1, right);
+}
+
+int pivot(std::vector<int>& nums, int left, int right)
+{
+    int p = nums[left];
+    while (left < right) {
+        while (left < right && nums[right] > p)
+            --right;
+        nums[left] = nums[right];
+        while (left < right && nums[left] <= p)
+            ++left;
+        nums[right] = nums[left];
+    }
+    nums[left] = p;
+    return left;
+}
+int pivot_stable(std::vector<int>& nums, int left, int right)
+{
+    std::vector<int> vec_p(right - left + 1, 0);
+    int piv = nums[left];
+    int vec_lf = 0, local = 0;
+    for (int i = left + 1; i <= right; ++i) {
+        if (nums[i] < piv)
+            vec_p[vec_lf++] = nums[i];
+    }
+    local = vec_lf;
+    vec_p[vec_lf++] = piv;
+    for (int i = left + 1; i <= right; ++i) {
+        if (nums[i] >= piv)
+            vec_p[vec_lf++] = nums[i];
+    }
+    vec_lf = 0;
+    int res = 0;
+    for (int i = left; i <= right; i++) {
+        if (local == vec_lf) {
+            res = i;
+        }
+        nums[i] = vec_p[vec_lf++];
+    }
+    return res;
+}
+
+std::pair<int, int> pivot_three(std::vector<int>& nums, int left, int right)
+{
+    int piv = nums[left];
+    int cur = left + 1;
+    while (cur <= right) {
+        if (nums[cur] < piv) {
+            std::swap(nums[cur++], nums[left++]); // cur++
+        } else if (nums[cur] > piv) {
+            std::swap(nums[cur], nums[right--]); // cur right--
+        } else {
+            cur++;
+        }
+    }
+    return { left, right };
+}
+```
+
+
+
+### 堆排序
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+
+void heapify(int arr[], int n, int i)
+{
+    int largest = i;
+    int l = 2 * i + 1;
+    int r = 2 * i + 2;
+    if (l < n && arr[l] > arr[largest]) {
+        largest = l;
+    }
+    if (r < n && arr[r] > arr[largest]) {
+        largest = r;
+    }
+    if (largest != i) {
+        swap(arr[i], arr[largest]);
+        heapify(arr, n, largest);
+    }
+}
+void heapSort(int arr[], int n)
+{
+    for (int i = n / 2 - 1; i >= 0; i--) {
+        heapify(arr, n, i);
+    }
+    for (int i = n - 1; i >= 0; i--) {
+        swap(arr[0], arr[i]);
+        heapify(arr, i, 0);
+    }
+}
+
+void printNums(int arr[], int n)
+{
+    for (int i = 0; i < n; i++) {
+        cout << arr[i] << " ";
+    }
+    cout << endl;
+}
+int main()
+{
+    int arr[] = { 12, 11, 13, 5, 6, 7 };
+    heapSort(arr, 6);
+    printNums(arr, 6);
+    return 0;
+}
+```
+
 
 
 ## 六、项目
