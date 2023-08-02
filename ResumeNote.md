@@ -1,3 +1,5 @@
+<meta name="referrer" content="no-referrer"/>
+
 Summary
 
 ## 一、c++基础
@@ -463,7 +465,47 @@ isalnum() 检查是否为字母和数字
 
 **substr()函数**返回本字符串的一个子串，从index开始，长num个字符;
 
-https://leetcode.cn/problems/fraction-addition-and-subtraction/
+[https://leetcode.cn/problems/fraction-addition-and-subtraction/](https://leetcode.cn/problems/fraction-addition-and-subtraction/)
+
+给定一个表示分数加减运算的字符串 `expression` ，你需要返回一个字符串形式的计算结果。 
+
+```cpp
+class Solution {
+public:
+    string fractionAddition(string expression) {
+        long long fenzi=0,fenmu=1;
+        int index=0,n=expression.size();
+        while(index<n){
+            long long x1=0,sign=1;
+            if(expression[index]=='-'||expression[index]=='+'){
+                sign=expression[index]=='-'?-1:1;
+                ++index;
+            }
+            while(index<n&&isdigit(expression[index])){
+                x1=x1*10+expression[index]-'0';
+                ++index;
+            }
+            x1=sign*x1;
+            ++index;
+            // cout<<x1<<" ";
+            long long y1=0;
+            while(index<n&&isdigit(expression[index])){
+                y1=y1*10+expression[index]-'0';
+                ++index;
+            }
+            // cout<<index<<" index-> "<<expression[index]<<" "<<x1<<" "<<y1<<endl;
+
+            fenzi=fenzi*y1+x1*fenmu; 
+            fenmu=fenmu*y1;
+        }
+        if(fenzi==0) return "0/1";
+        long long g=gcd(abs(fenzi),fenmu);
+        return to_string(fenzi/g)+'/'+to_string(fenmu/g);
+    }
+};
+```
+
+
 
 ### explicit
 
@@ -614,6 +656,16 @@ std::atomic<int> value = 99;
 ### 虚函数
 
 C++中的虚函数是一种在基类中声明并在派生类中重写的函数。它们用于实现多态性，即通过基类的指针或引用调用派生类的方法，在运行时根据对象的实际类型来调用相应的函数；
+
+### 析构函数是不是必须要为虚函数？
+
+**析构函数可以是虚函数，也可以不是虚函数。**
+
+析构函数为虚函数的情况：**继承**
+
+当父类指针释放子类对象时，`如果父类的析构函数不是虚函数，子类的析构函数可能调不到`（指针类型是父类，所以直接调用父类的析构函数），从而导致**内存泄漏**。
+
+既然这样，是不是C++默认的析构函数设计成虚函数更合适？答案是否定的，**虚函数需要额外的虚函数表和虚表指针，占用额外的内存**，`如果类的设计不考虑继承，把析构函数设置成虚函数无疑是浪费内存。`
 
 ### 为什么构造函数不能是虚函数
 
@@ -1076,7 +1128,10 @@ Move-Construct2
 
 
 
+### `const` 成员函数
 
+- `const` 成员函数通过在函数声明后加上 `const` 关键字来标识。例如：`void func() const;`
+- 在类中，如果一个成员函数不会修改对象的状态，可以将其声明为 `const` 成员函数。在 `const` 成员函数中，不能修改任何非 `mutable` 成员变量。
 
 ### C++类型转换
 
@@ -1922,6 +1977,42 @@ MySQL 的架构共分为两层：**Server 层和存储引擎层**
 - 在上面两个都没有的情况下，InnoDB 将自动生成一个隐式自增 id 列作为聚簇索引的索引键（key）
 
 B+Tree 存储千万级的数据只需要 3-4 层高度就可以满足，这意味着从千万级的表查询目标数据最多需要 3-4 次磁盘 I/O（把读取一个节点当作一次磁盘 I/O 操作），所以**B+Tree 相比于 B 树和二叉树来说，最大的优势在于查询效率很高，因为即使在数据量很大的情况，查询一个数据的磁盘 I/O 依然维持在 3-4次。**
+
+#### 树形存储与磁盘IO关系
+
+**磁盘IO时间 = 寻道 + 磁盘旋转 + 数据传输时间**
+
+从磁盘读取数据时，系统会将逻辑地址发给磁盘，磁盘将逻辑地址转换为物理地址（哪个磁道，哪个扇区）。 `磁头进行机械运动，先找到相应磁道，再找该磁道的对应扇区`，扇区是磁盘的最小存储单元。
+
+(寻道时间) 首先接收到要读取的数据的物理位置, 传动臂将读写头定位到数据对应的磁道, 一般这个寻道的时间单位为 ms.
+
+(旋转时间) 定位到对应磁道上后, 接着等待读写头定位到该磁道上数据对应的扇区的第一个字节.
+
+(传输时间) 从磁盘读出或者写入数据, 通常这个时间是最低的.
+
+![](https://gitee.com/juzihhu/image_bed/raw/master/img/202308012301860.png)
+
+**索引在磁盘上的存储**
+
+每个InnoDB表都有一个称为聚集索引的特殊索引，该索引是按照表的主键构造的一棵B+树。
+
+根据示例数据构建如图所示聚簇索引；
+
+![image-20230801230353955](https://gitee.com/juzihhu/image_bed/raw/master/img/202308012303570.png)
+
+- `叶子节点存放了整张表的所有行数据。`
+- 非叶子节点并不存储行数据，是为了能`存储更多索引键`，从而降低B+树的高度，进而减少IO次数。
+- 聚集索引的存储在物理上并不是连续的，每个数据页在不同的磁盘块，通过一个双向链表来进行连接
+
+==查找：假设要查找数据项6==
+
+1. 把根节点由磁盘块0加载到内存，发生一次IO，在内存中用二分查找确定6在3和9之间；
+2. 通过指针P2的磁盘地址，将磁盘2加载到内存，发生第二次IO，再在内存中进行二分查找找到6，结束。
+
+这里只进行了两次IO，实际上，每个磁盘块大小为4K，3层的B+树可以表示上百万的数据，也就是每次查找只需要3次IO，所以索引对性能的提高将是巨大的。
+
+参考链接：https://juejin.cn/post/6844903856388718606
+
 
 #### 主键索引的 B+Tree 和二级索引的 B+Tree 区别
 
@@ -2916,3 +3007,223 @@ int main() {
 }
 ```
 
+
+
+
+
+### C++确保线程安全的几种方式？代码举例
+
+- **互斥锁**：互斥锁是一种简单但有效的线程安全机制。它用于确保对共享资源的访问是线程安全的。
+
+- **条件变量**：条件变量用于等待某个条件变为真。它通常与互斥锁一起使用，以确保等待条件变量的线程不会被其他线程打断。
+
+- **原子操作**：原子操作是保证在多线程环境下操作是原子性的操作。这意味着操作不会被其他线程打断。
+
+  ```cpp
+  // 定义一个原子变量
+  std::atomic<int> counter;
+  
+  // 使用原子变量
+  void increment_counter() {
+    // 原子地增加计数器
+    ++counter;
+  }
+  
+  ```
+
+  
+
+- **线程局部存储**：线程局部存储是每个线程都有自己一个副本的变量。这可以防止多个线程访问同一个变量导致数据竞争。
+
+  ```cpp
+  // 定义一个线程局部变量
+  std::thread_local int counter;
+  
+  // 使用线程局部变量
+  void increment_counter() {
+    // 原子地增加计数器
+    ++counter;
+  }
+  ```
+
+
+
+### 互斥锁
+
+使用了 `std::mutex` 和 `std::lock_guard<std::mutex>`
+
+`std::lock_guard` 是一个 RAII（Resource Acquisition Is Initialization）机制的实现，它会在构造时自动加锁，析构时自动解锁，从而确保在任何情况下都会正确地释放互斥锁，避免了因为异常或返回等情况下忘记解锁的问题。
+
+```cpp
+#include <iostream>
+#include <thread>
+#include <mutex>
+
+std::mutex mtx; // 定义一个互斥锁
+
+void threadFunction() {
+    std::lock_guard<std::mutex> lock(mtx); // 使用std::lock_guard自动管理锁的生命周期
+    // 访问共享资源的代码
+    std::cout << "Thread ID: " << std::this_thread::get_id() << " is accessing the shared resource." << std::endl;
+}
+
+int main() {
+    const int numThreads = 5;
+    std::thread threads[numThreads];
+
+    for (int i = 0; i < numThreads; ++i) {
+        threads[i] = std::thread(threadFunction);
+    }
+
+    for (int i = 0; i < numThreads; ++i) {
+        threads[i].join();
+    }
+
+    return 0;
+}
+
+```
+
+
+
+1. 定义互斥锁：首先需要定义一个互斥锁变量，一般使用 `std::mutex` 类型。
+2. 加锁：在进入临界区前，使用 `lock()` 或 `try_lock()` 方法来获取互斥锁的所有权。`lock()` 方法会阻塞当前线程，直到成功获取锁，而 `try_lock()` 方法会尝试立即获取锁，如果锁已经被其他线程占有，它会立即返回而不是阻塞。
+3. 访问共享资源：一旦成功获取了互斥锁的所有权，当前线程就可以进入临界区，访问共享资源。
+4. 解锁：在临界区访问共享资源结束后，使用 `unlock()` 方法释放互斥锁，使其他线程有机会获得锁，继续访问共享资源。
+
+```cpp
+#include <iostream>
+#include <thread>
+#include <mutex>
+
+std::mutex mtx; // 定义互斥锁
+
+void threadFunction(int threadID) {
+    mtx.lock(); // 加锁
+    std::cout << "Thread " << threadID << " is entering the critical section." << std::endl;
+    // 访问共享资源
+    std::cout << "Thread " << threadID << " is accessing the shared resource." << std::endl;
+    mtx.unlock(); // 解锁
+}
+
+int main() {
+    const int numThreads = 5;
+    std::thread threads[numThreads];
+
+    for (int i = 0; i < numThreads; ++i) {
+        threads[i] = std::thread(threadFunction, i);
+    }
+
+    for (int i = 0; i < numThreads; ++i) {
+        threads[i].join();
+    }
+
+    return 0;
+}
+
+```
+
+
+
+### 条件变量
+
+```cpp
+#include <condition_variable>
+#include <iostream>
+#include <mutex>
+#include <thread>
+
+std::mutex mtx;
+std::condition_variable cv;
+bool ready = false;
+
+void workerThread() {
+  std::unique_lock<std::mutex> lock(mtx);
+  cv.wait(lock, []() -> bool { return ready; }); // 等待条件变量ready为true
+  // 在等待期间，线程会释放互斥锁，阻塞等待被唤醒
+  std::cout << "Worker thread is running." << std::endl;
+}
+
+int main() {
+  std::thread worker(workerThread);
+
+  std::this_thread::sleep_for(std::chrono::seconds(2));
+
+  {
+    std::lock_guard<std::mutex> lock(mtx);
+    ready = true;
+  }
+
+  cv.notify_one(); // 唤醒等待的线程
+
+  worker.join();
+
+  return 0;
+}
+
+```
+
+这段代码演示了如何使用条件变量（`std::condition_variable`）来实现线程间的同步和通信。代码中包含一个工作线程（`workerThread`）和主线程（`main`）。它们之间通过条件变量和互斥锁来实现同步，确保工作线程在满足特定条件时被唤醒执行。
+
+1. 在主线程中，首先创建了一个工作线程 `worker`，并在工作线程开始执行前延迟2秒钟（`std::this_thread::sleep_for(std::chrono::seconds(2))`）。这是为了模拟在工作线程执行前需要等待的情况。
+
+2. 接下来，主线程获取了互斥锁 `mtx`，并将条件变量 `ready` 设置为 `true`。这里使用了 `std::lock_guard` 简化了互斥锁的管理。条件变量 `ready` 表示工作线程可以开始执行了。
+
+3. 在设置了 `ready` 后，主线程通过 `cv.notify_one()` 唤醒了等待的工作线程。`notify_one()` 用于通知等待在条件变量上的一个线程，以便它继续执行。
+
+4. 工作线程 `workerThread` 中，首先获取了互斥锁 `mtx`，然后调用 `cv.wait(lock, [] { return ready; })`。`cv.wait()` 是一个条件变量的等待操作，它会使得当前线程阻塞等待，直到条件变量 `ready` 的值为 `true`。在等待期间，工作线程会释放互斥锁 `mtx`，允许其他线程进入临界区。
+
+5. 当主线程将 `ready` 设置为 `true` 并调用 `cv.notify_one()` 后，工作线程收到通知被唤醒，它再次尝试获取互斥锁 `mtx`。一旦成功获取锁，工作线程继续执行，并输出 "Worker thread is running."。
+
+通过这种方式，我们实现了主线程与工作线程之间的同步和通信。主线程通过设置 `ready` 条件变量，唤醒了工作线程的等待，并让工作线程在条件满足时继续执行。使用条件变量可以避免线程的忙等待，节省了系统资源，提高了线程的效率。
+
+
+
+```cpp
+#include <iostream>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+
+std::mutex mtx;
+std::condition_variable cv;
+bool ready = false;
+
+void workerThread() {
+    std::unique_lock<std::mutex> lock(mtx);
+    cv.wait(lock, [] { return ready; }); // 等待条件变量ready为true
+    // 在等待期间，线程会释放互斥锁，阻塞等待被唤醒
+    std::cout << "Worker thread is running. Thread ID: " << std::this_thread::get_id() << std::endl;
+}
+
+int main() {
+    const int numThreads = 5;
+    std::thread threads[numThreads];
+
+    // 创建多个工作线程
+    for (int i = 0; i < numThreads; ++i) {
+        threads[i] = std::thread(workerThread);
+    }
+
+    // 延迟2秒钟
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        ready = true;
+    }
+
+    // 唤醒等待的工作线程
+    cv.notify_all();
+
+    // 等待所有工作线程执行完毕
+    for (int i = 0; i < numThreads; ++i) {
+        threads[i].join();
+    }
+
+    return 0;
+}
+
+```
+
+注意到 `cv.notify_all()` 用于唤醒所有等待在条件变量 `cv` 上的工作线程，而不再是之前的 `cv.notify_one()`。因为有多个工作线程在等待，我们需要全部唤醒，以确保它们都能继续执行。
