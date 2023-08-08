@@ -1549,6 +1549,36 @@ DNS使用TCP协议与UDP协议视情况而定，一般来说是认为使用的UD
 
 长连接是指客户端与服务器之间的TCP连接可以持续一段时间，不会因为一次数据传输完成就立即关闭连接。适用于需要频繁交互数据的场景，例如在线聊天、视频会议等。在长连接中，客户端和服务器之间可以保持会话状态，减少了重复连接和认证的开销，提高了网络效率。但是，长连接也会占用服务器资源，需要根据实际情况进行权衡和选择
 
+
+
+### session与cookie的区别
+
+Session和Cookie是在Web开发中用于维护用户状态和数据的两种机制，但它们有一些区别：
+
+**Cookie：**
+
+1. **存储位置：** Cookie是存储在客户端（浏览器）的小型文本文件中。
+2. **大小限制：** Cookie的大小一般受到浏览器的限制，通常为4KB左右。
+3. **持久性：** 可以设置Cookie的过期时间，可以是会话级的（浏览器关闭后失效）或持久的（在指定时间后失效）。
+4. **跨域：** Cookie可以在同一个域名下的不同页面之间共享，但有域名和路径限制。
+5. **安全性：** Cookie的内容可以被用户修改，因此不适合存储敏感信息。
+
+**Session：**
+
+1. **存储位置：** Session是存储在服务器端的数据存储区域，通常存储在内存中，也可以存储在数据库或文件中。
+2. **大小限制：** 理论上Session的大小不受特定限制，但实际上受服务器资源的限制。
+3. **持久性：** Session的生命周期在用户访问网站期间是持久的，但可能会受到服务器的配置和会话管理策略的影响。
+4. **跨域：** Session存储在服务器端，因此可以在同一域名下的不同页面之间共享。
+5. **安全性：** 相对于Cookie，Session的安全性更高，因为存储在服务器端，用户无法直接访问和修改Session数据。
+
+**区别总结：**
+
+- Cookie存储在客户端，Session存储在服务器端。
+- Cookie有大小限制，Session理论上没有固定大小限制。
+- Cookie可以在客户端持久存储，Session通常在用户关闭浏览器后失效。
+- Cookie可以跨域共享，Session在同一域名下共享。
+- Cookie的内容可以被用户修改，Session相对更安全。
+
 ### TCP篇
 
 #### 什么是 TCP 连接
@@ -2911,9 +2941,259 @@ int main()
 
 ### 合并两个有序链表
 
+```cpp
+/**
+ * Definition for singly-linked list.
+ * struct ListNode {
+ *     int val;
+ *     ListNode *next;
+ *     ListNode() : val(0), next(nullptr) {}
+ *     ListNode(int x) : val(x), next(nullptr) {}
+ *     ListNode(int x, ListNode *next) : val(x), next(next) {}
+ * };
+ */
+class Solution {
+public:
+    ListNode* mergeTwoLists(ListNode* list1, ListNode* list2) {
+        if(!list1) return list2;
+        if(!list2) return list1;
+        ListNode* phead=new ListNode(-1),*cur;
+        phead->next=list1;
+        bool flag=true;
+        if(list1->val>list2->val){
+            phead->next=list2;
+            flag=false;
+        }
+        cur=phead->next;
+        if(flag) list1=list1->next;
+        else list2=list2->next;
+        while(list1&&list2){
+            if(list1->val < list2->val){
+                cur->next=list1;
+                list1=list1->next;
+            }
+            else{
+                cur->next=list2;
+                list2=list2->next;
+            }
+            cur=cur->next;
+        }
+        if(list1) cur->next=list1;
+        else cur->next=list2;
+        return phead->next;
+    }
+};
+```
+
 ### 合并k个有序链表
 
 ### 给定一棵二叉树和target，输出路径之和=target的路径
+
+### 最长递增子序列
+
+```cpp
+class Solution {
+public:
+    int lengthOfLIS(vector<int>& nums) {
+        int result=1;
+        vector<int> dp(nums.size()+1,1);
+        for(int i=1;i<nums.size();++i){
+            for(int j=0;j<i;++j){
+                if(nums[i]>nums[j]){
+                    dp[i]=max(dp[i],dp[j]+1);
+                }
+            }
+            if(dp[i]>result) result=dp[i];
+        }
+        return result;
+    }
+    
+};
+```
+
+
+
+### 最长无重复字串
+
+```cpp
+class Solution {
+public:
+    int lengthOfLongestSubstring(string s) {
+        if(s.size()<=1) return s.size();
+        int max_len=0;
+        unordered_set<char> map;
+        map.insert(s[0]);
+        int start=0;
+        int res=1,len=0;
+        for(int i=1;i<s.size();++i){
+            char t=s[i];
+            if(!map.count(t)) map.insert(t);
+            else{
+                while(map.count(t)){
+                    map.erase(s[start]);
+                    ++start;
+                }
+                map.insert(t);
+            }
+            len=i-start+1;
+            if(len>res) res=len;
+        }
+        return res;
+    }
+};
+```
+
+### 场景题
+
+#### 内存限制下查找数组的重复数
+
+==哈希==，`如果数据量很大，采用位方式（俗称位图）存储数据是常用的思路`
+
+- 题目要求：给定一个数组，包含从1到N的整数，N最大为32000，数组可能还有重复值，且N的取值不定，若只有4KB的内存可用，该如何打印数组中所有重复元素。
+
+
+
+> 如果只有4KB的空间，那么只能寻址8*4*2^10个比特，这个值比32000要大的，因此我们可以创建32000比特的位向量(比特数组)，其中一个比特位置就代表一个整数。
+>
+> 利用这个位向量，就可以遍历访问整个数组。如果发现数组元素是v，那么就将位置为v的设置为1，碰到重复元素，就输出一下。
+
+```cpp
+#include <iostream>
+using namespace std;
+
+// 定义一个 Bitmap 类
+class Bitmap {
+public:
+    // 构造函数，初始化位图的大小
+    Bitmap(int size = 32) {
+        bits = new int[size / 32 + 1];
+    }
+
+    // 析构函数，释放内存
+    ~Bitmap() {
+        delete[] bits;
+    }
+
+    // 查询给定位置的位是否为 1
+    bool get(int pos) { // true if bit is 1, else: false
+        return (bits[pos / 32] & (1 << (pos & 0x1f))) != 0;
+    }
+
+    // 设置给定位置的位为 1
+    void set(int pos) {
+        bits[pos / 32] |= (1 << (pos & 0x1f));
+    }
+
+private:
+    int *bits; // 存储位图的数组
+};
+
+// 打印数组中的重复元素
+void print_duplicates(int a[], int n, int bitsize) {
+    Bitmap bm(bitsize); // 创建一个位图实例
+    for (int i = 0; i < n; ++i) {
+        if (bm.get(a[i] - 1)) // 查询位图中是否已经设置了该位置
+            cout << a[i] << endl; // 如果已经设置，则说明该元素是重复的，打印出来
+        else
+            bm.set(a[i] - 1); // 如果没有设置，则设置该位置为 1，表示该元素已经出现过
+    }
+}
+
+int main() {
+    int a[] = {
+        1, 2, 3, 4, 5, 32000, 7, 8, 9, 10, 11, 1, 2, 13, 15, 16, 32000, 11, 5, 8
+    };
+    print_duplicates(a, 20, 32000); // 调用函数打印出重复的元素
+    return 0;
+}
+
+```
+
+当 `pos` 的值为 35 时，我们来看一下 `get` 和 `set` 函数是如何处理的。
+
+1. `get` 函数：
+
+- `pos / 32` 计算出 `pos` 对应的 `bits` 数组的索引：35 / 32 = 1，所以我们需要查看 `bits[1]`。
+- `pos & 0x1f` 计算出 `pos` 对应的 `bits` 数组索引内的位偏移：35 & 0x1f = 3，所以我们需要查看 `bits[1]` 的第 3 位。
+- `1 << (pos & 0x1f)` 生成一个只有第 3 位为 1 的值，即 00001000（二进制）。
+- `bits[pos / 32] & (1 << (pos & 0x1f))` 操作将 `bits[1]` 中的第 3 位与上述生成的值进行位与操作。如果结果非 0，那么表示该位置已经被设置为 1。如果结果为 0，表示该位置没有被设置为 1。
+
+1. `set` 函数：
+
+- `pos / 32` 计算出 `pos` 对应的 `bits` 数组的索引：35 / 32 = 1，所以我们需要设置 `bits[1]`。
+- `pos & 0x1f` 计算出 `pos` 对应的 `bits` 数组索引内的位偏移：35 & 0x1f = 3，所以我们需要设置 `bits[1]` 的第 3 位。
+- `1 << (pos & 0x1f)` 生成一个只有第 3 位为 1 的值，即 00001000（二进制）。
+- `bits[pos / 32] |= (1 << (pos & 0x1f))` 操作将 `bits[1]` 中的第 3 位与上述生成的值进行位或操作，将该位置的位设置为 1。
+
+综上所述，在这个例子中，当 `pos` 为 35 时，`get` 函数会返回 `false`，因为 `bits[1]` 的第 3 位是 0，表示这个位置没有被设置为 1。而调用 `set` 函数后，`bits[1]` 的第 3 位会被设置为 1。
+
+
+
+- 题目要求：给定一个输入文件，包含40亿个非负整数，请设计一个算法，产生一个不存在该文件中的整数，假设你有1GB的内存来完成这项任务。
+
+假设用哈希表来保存出现过的数，如果 40 亿个数都不同，则哈希表的记录数为 40 亿条，存一个 32 位整数需要 4B，`所以最差情况下需要 40 亿*4B=160 亿字节，大约需要16GB 的空间`，这是不符合要求的。
+
+如果数据量很大，`采用位方式（俗称位图）存储数据是常用的思路`，那位图如何存储元素的呢？ 我们可以使用 bit map 的方式来表示数出现的情况。具体地说， 是`申请一个长度为 4 294 967 295 的 bit 类型的数组 bitArr（就是boolean类型），bitArr 上的每个位置只可以表示 0 或1 状态`。8 个bit 为 1B，所以长度为 4 294 967 295 的 bit 类型的数组占用 **500MB** 空间，这就满足题目给定的要求了。
+
+那怎么使用这个 bitArr 数组呢？就是遍历这 40 亿个无符号数，遇到所有的数时，就把 bitArr 相应位置的值设置为 1。例如，遇到 1000，就把bitArr[7000]设置为 1。
+
+遍历完成后，再依次遍历 bitArr，看看哪个位置上的值没被设置为 1，这个数就不在 40 亿个数中。例如，发现 bitArr[8001]==0，那么 8001 就是没出现过的数，遍历完 bitArr 之后，所有没出现的数就都找出来了。
+
+**位存储的核心是：我们存储的并不是这40亿个数据本身，而是其对应的位置。**
+
+**使用10MB来存储**
+
+```css
+如果现在只有 10MB 的内存，此时位图也不能搞定了，我们要另寻他法。这里我们使用分块思想，时间换空间，通过两次遍历来搞定。
+
+如果只有10MB，我们只要求找到其中一个没出现过的数即可。
+
+首先，将0~4 294 967 295(2^32) 这个范围是可以平均分成 64 个区间的，每个区间是 67 108 864 个数，例如：
+
+第0 区间（0~67 108 863）
+
+第 1 区间（67 108 864~134 217 728）
+
+第 i 区间（67 108 864´I~67 108 864´(i+1)-1），
+
+……，
+
+第 63 区间（4 227 858 432~4 294 967 295）。
+
+因为一共只有 40 亿个数，所以，如果统计落在每一个区间上的数有多少，肯定有至少一个区间上的计数少于67 108 864。利用这一点可以找出其中一个没出现过的数。具体过程是通过两次遍历来搞定：
+
+第一次遍历，先申请长度为 64 的整型数组 countArr[0..63]，countArr[i]用来统计区间 i 上的数有多少。遍历 40 亿个数，根据当前数是多少来决定哪一个区间上的计数增加。例如，如果当前数是 3 422 552 090 ， 3 422 552 090/67 108 864=51 ， 所以第 51 区间上的计数增加countArr[51]++。遍历完 40 亿个数之后，遍历 countArr，必然会有某一个位置上的值（countArr[i]） 小于 67 108 864，表示第 i 区间上至少有一个数没出现过。我们肯定会找到至少一个这样的区间。
+
+此时使用的内存就是countArr 的大小（64*4B），是非常小的。
+
+假设找到第 37 区间上的计数小于 67 108 864，那么我们对这40亿个数据进行第二次遍历：
+
+申请长度为 67 108 864 的 bit map，这占用大约 8MB 的空间，记为 bitArr[0..67108863]。
+
+遍历这 40 亿个数，此时的遍历只关注落在第 37 区间上的数，记为 num（num满足num/67 108 864==37），其他区间的数全部忽略。
+
+如果步骤 2 的 num 在第 37 区间上，将 bitArr[num - 67108864*37]的值设置为 1，也就是只做第 37 区间上的数的 bitArr 映射。
+
+遍历完 40 亿个数之后，在 bitArr 上必然存在没被设置成 1 的位置，假设第 i 个位置上的值没设置成 1，那么 67 108 864´37+i 这个数就是一个没出现过的数。
+```
+
+总结一下进阶的解法：
+
+根据 10MB 的内存限制，确定统计区间的大小，就是第二次遍历时的 bitArr 大小。
+
+利用区间计数的方式，找到那个计数不足的区间，这个区间上肯定有没出现的数。
+
+对这个区间上的数做 bit map 映射，再遍历bit map，找到一个没出现的数即可。
+
+
+- 题目要求：有一个包含 20 亿个全是 32 位整数的大文件，在其中找到出现次数最多的数。要求，内存限制为 2GB。
+
+一共有 20 亿个数，哪怕只是一个数出现了 20 亿次，用 32 位的整数也可以表示其出现的次数而不会产生溢出，所以哈希表的 key 需要占用 4B，value 也是 4B。那么哈希表的一条记录（key,value）需要占用 8B，当`哈希表记录数为 2 亿个时，需要至少 1.6GB 的内存`。
+
+如果 20 亿个数中不同的数超过 2 亿种，最极端的情况是 20 亿个数都不同，那么在哈希表中可能需要产生 20 亿条记录，这样内存会不够用，所以一次性用哈希表统计 20 亿个数的办法是有很大风险的。
+
+解决办法是`把包含 20 亿个数的大文件用哈希函数分成 16 个小文件`，根据哈希函数的性质，==同一种数不可能被散列到不同的小文件上==，同时每个小文件中不同的数一定不会大于 2 亿种， 假设哈希函数足够优秀。**然后对每一个小文件用哈希表来统计其中每种数出现的次数，这样我们就得到了 16 个小文件中各自出现次数最多的数**，还有各自的次数统计。接下来只要选出这16 个小文件各自的第一名中谁出现的次数最多即可。
+
 
 ## 六、项目
 
@@ -3461,7 +3741,7 @@ int main(){
 
 - 当使用detach()函数时，主调线程继续运行，被调线程驻留后台运行，主调线程无法再取得该被调线程的控制权。当主调线程结束时，由运行时库负责清理与被调线程相关的资源。
 
-### 多线程线程交替打印
+### 多线程交替打印
 
 ```cpp
 #include <iostream>
@@ -3498,7 +3778,49 @@ int main() {
 }
 ```
 
+### 多线程对多个文件内的数字求和
 
+```cpp
+#include <fstream>
+#include <iostream>
+#include <mutex>
+#include <thread>
+#include <vector>
+
+std::mutex mtx;
+long long totalSum = 0;
+
+void processFile(const std::string &filename) {
+  std::ifstream file(filename);
+  int num;
+  long long localSum = 0;
+
+  while (file >> num) {
+    localSum += num;
+  }
+
+  std::lock_guard<std::mutex> lock(mtx);
+  totalSum += localSum;
+}
+
+int main() {
+  std::vector<std::thread> threads;
+  std::vector<std::string> path{"a.txt", "b.txt", "c.txt"};
+  std::cout << "begin \n";
+  for (int i = 0; i < path.size(); ++i) {
+    threads.emplace_back(processFile, path[i]);
+  }
+
+  for (auto &thread : threads) {
+    thread.join();
+  }
+
+  std::cout << "Total sum: " << totalSum << std::endl;
+
+  return 0;
+}
+
+```
 
 
 
