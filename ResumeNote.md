@@ -3250,6 +3250,121 @@ public:
 };
 ```
 
+### 最长公共子串
+
+题目描述：给定两个字符串，求出他们之间最长相同子字符串长度。
+解题步骤：采用动态规划，与求解最长公共子序列类似，只不过状态定义要修改。
+1、 状态定义：dp[i][j]表示以s1[i]和s2[j]为最后一个元素的最长公共子串，如果最长公共子串存在，公共子串的最后一个元素一定是s1[i]或者s2[j]他们相等。
+2、 状态转移方程：
+如果s1[i]和s2[j]相等，那么：dp[i][j] = dp[i-1][j-1]+1；
+如果s1[i]和s2[j]不相等，则：dp[i][j] = 0；
+3、 初始化：初始dp[0][j]和dp[i][0]都为0
+4、 输出：dp[i][j]的最大值
+————————————————
+原文链接：https://blog.csdn.net/zy450271923/article/details/105301611
+
+### 最长公共子序列
+
+```cpp
+class Solution {
+public:
+    int longestCommonSubsequence(string text1, string text2) {
+        // 定义dp数组和lcs数组，大小分别是(text1.size()+1)×(text2.size()+1)，并初始化为0和空字符串
+        vector<vector<int>> dp(text1.size()+1,vector<int>(text2.size()+1,0));
+        vector<vector<string>> lcs(text1.size()+1,vector<string>(text2.size()+1,""));
+
+        // 动态规划求解最长公共子序列
+        for(int i=1;i<=text1.size();++i){
+            for(int j=1;j<=text2.size();++j){
+                // 如果text1[i-1]和text2[j-1]相等，则它们可以作为公共子序列的一部分
+                if(text1[i-1]==text2[j-1]){
+                    dp[i][j]=dp[i-1][j-1]+1;  // 更新dp[i][j]的值为dp[i-1][j-1]+1
+                    lcs[i][j]=lcs[i-1][j-1]+text1[i-1];  // 更新lcs[i][j]的值为lcs[i-1][j-1]+text1[i-1]
+                }
+                else{
+                    // 如果text1[i-1]和text2[j-1]不相等，则它们不能同时作为公共子序列的一部分
+                    dp[i][j]=max(dp[i-1][j],dp[i][j-1]);  // dp[i][j]的值由dp[i-1][j]和dp[i][j-1]中的较大值决定
+                    if(dp[i][j]==dp[i-1][j]) lcs[i][j]=lcs[i-1][j];  // 如果dp[i][j]由dp[i-1][j]转移而来，则lcs[i][j]也由lcs[i-1][j]转移而来
+                    else lcs[i][j]=lcs[i][j-1];  // 否则，lcs[i][j]由lcs[i][j-1]转移而来
+                }
+            }
+        }
+        cout<<lcs[text1.size()][text2.size()]<<endl;  // 输出最长公共子序列
+        return dp[text1.size()][text2.size()];  // 返回text1和text2的最长公共子序列长度
+    }
+};
+```
+
+
+
+### [编辑距离](https://leetcode.cn/problems/edit-distance/)
+
+给你两个单词 `word1` 和 `word2`， *请返回将 `word1` 转换成 `word2` 所使用的最少操作数* 。
+
+你可以对一个单词进行如下三种操作：
+
+- 插入一个字符
+- 删除一个字符
+- 替换一个字符
+
+```cpp
+class Solution {
+public:
+    int minDistance(string word1, string word2) {
+        int n=word1.size(),m=word2.size();
+        vector<vector<int>> dp(n+1,vector<int>(m+1));
+        for(int i=0;i<=m;++i) dp[0][i]=i;
+        for(int i=0;i<=n;++i) dp[i][0]=i;
+
+        for(int i=1;i<=n;++i){
+            for(int j=1;j<=m;++j){
+                
+                if(word1[i-1]==word2[j-1]){
+                    dp[i][j]=dp[i-1][j-1];
+                    continue;
+                } 
+                else {  
+                    int temp =min(dp[i][j-1]+1,dp[i-1][j]+1);
+                    temp=min(temp,dp[i-1][j-1]+1); 
+                    dp[i][j]=temp;
+                } 
+            }
+        }
+        return dp[n][m];
+    }
+};
+```
+
+**题目**
+字符串A编辑成字符串B可有三种操作： 插入、删除、修改，对应的代价为c0，c1，c2，给出字符串A和字符串B以及各自长度m、n，返回字符串A编辑成字符串B的最小代价。
+
+**分析**
+状态dp[i][j]表示A[0,...i-1]编辑为B[0,...j-1]需要的代价，i，j指的是当前A、B中的字符个数
+
+边界值讨论
+i = 0时，表示从空串编辑为B[0,...j-1],需要插入j个元素，dp[0][j] = c0*j
+
+j = 0时，表示从A[0,..i-1]编辑为空串，需要删除i个元素，dp[i][0] = c1* i;
+
+一般情况讨论
+其他情况中A[0,...i-1]编辑为B[0,...j-1]，有以下两种情况：
+
+（一）A[i-1] == B[j-1]时，最后一个元素不用动，只用考虑A[0,...i-2]编辑为B[0,...j-2]需要的代价,dp[i][j] = dp[i-1][j-1]
+
+（二）A[i-1]!=B[j-1]时，又可以分成以下三种情况：
+
+1、从A[0,...i-2]编辑为B[0,...j-1]，再删除A[i-1]
+
+2、从A[0,...i-1]编辑为B[0,...j-2]，再插入B[j-1]
+
+3、从A[0,...i-2]编辑为B[0,...j-2]，再将A[i-1]修改为B[j-1]
+
+在以上三种情况中取最小值。
+————————————————
+原文链接：https://blog.csdn.net/gulaixiangjuejue/article/details/85249973
+
+### 单例模式
+
 ### 场景题
 
 #### 内存限制下查找数组的重复数
