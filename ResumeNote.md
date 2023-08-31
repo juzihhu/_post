@@ -743,6 +743,23 @@ std::atomic<int> value = 99;
 
 为了确保线程安全，可以使用互斥锁（Mutex）、信号量（Semaphore）等机制来保护关键代码段，同时只允许一个线程进入。这样可以避免多个线程同时访问和修改同一个变量，从而确保安全性和正确性
 
+
+
+### static
+
+**`static` 关键字的不同用法：**
+
+- **局部静态变量（Static Local Variables）：** 在函数内部声明的变量可以使用 `static` 关键字进行修饰。这样的变量在==整个程序的生命周期内只会被初始化一次==，并且存储在==静态存储区==。它在函数调用结束后并不会被销毁，下次函数再次调用时会继续存在。
+- **全局静态变量（Static Global Variables）：** ==在全局范围内声明的变量，也就是在任何函数外部声明的变量==，可以使用 `static` 关键字进行修饰。这样的变量作用域仅限于声明它的文件，也就是说它在其他文件中是不可见的。同样，它也存储在静态存储区。
+- **静态成员变量（Static Member Variables）：** 在类内部声明的静态成员变量==属于整个类而不是类的实例==。这些变量在所有`类的实例之间共享，存储在静态存储区`。
+- **静态成员函数（Static Member Functions）：** `类中的静态成员函数不属于任何类的实例，因此它不访问任何实例特定的数据`。==静态成员函数可以被直接通过类名调用，而不需要创建类的实例==。(单例模式)
+
+**局部静态变量与全局静态变量区别：** 两者的作用域不一样，前者的作用域局限于声明它们的函数，后者的作用域限于整个文件；
+
+**`static` 线程安全性：**
+
+`static` 变量本身并不是线程安全或线程不安全的，它的线程安全性取决于你的代码如何使用它。在多线程环境中，多个线程访问和修改同一个 `static` 变量可能会引发竞争条件和数据不一致的问题。为了保证线程安全性，你可能需要使用互斥锁等机制来保护 `static` 变量的访问和修改。
+
 ### 虚函数
 
 C++中的虚函数是一种在基类中声明并在派生类中重写的函数。它们用于实现多态性，即通过基类的指针或引用调用派生类的方法，在运行时根据对象的实际类型来调用相应的函数；
@@ -1229,7 +1246,31 @@ demo.insert(demo.end(), test.begin(), test.end());//{1,3,2,5,5,7,8,9}
 demo.insert(demo.end(), { 10,11 });//{1,3,2,5,5,7,8,9,10,11}
 ```
 
-### vector扩容机制
+### **vector扩容与迭代器失效**
+
+注意结合指针使用时的情况
+
+`std::vector` 可以在中间删除元素。你可以使用 `erase` 函数来删除指定位置的元素
+
+删除位置索引为2的元素    vec.erase(vec.begin() + 2);
+
+当使用 `vector` 的 `erase` 函数删除元素时，会导致迭代器失效，因为删除元素后，容器的大小改变了，原先的迭代器可能会指向无效的位置，从而导致未定义的行为。
+
+为了解决这个问题，可以使用以下方法：使用返回值：`erase` 函数返回一个指向被删除元素之后元素的迭代器，可以在删除后将迭代器更新为返回的迭代器。
+
+```cpp
+std::vector<int> myVector = {1, 2, 3, 4, 5};
+for (auto it = myVector.begin(); it != myVector.end();) {
+    if (*it == 3) {
+        it = myVector.erase(it);
+    } else {
+        ++it;
+    }
+}
+
+```
+
+
 
 当向vector中插入元素时，如果元素有效个数size与空间容量capacity相等时，vector内部会触发扩容机制：
 
@@ -2591,6 +2632,8 @@ MySQL 的架构共分为两层：**Server 层和存储引擎层**
 - 按「物理存储」分类：**聚簇索引（主键索引）、二级索引（辅助索引）**。
 - 按「字段特性」分类：**主键索引、唯一索引、普通索引、前缀索引**。
 
+什么是`聚簇索引？ `找到了索引就找到了需要的数据，那么这个索引就是聚簇索引，所以主键就是聚簇索引，修改聚簇索引其实就是修改主键。 什么是非聚簇索引？ 索引的存储和数据的存储是分离的，也就是说找到了索引但没找到数据，需要根据索引上的值(主键)再次回表查询,非聚簇索引也叫做辅助索引。
+
 **所谓的存储引擎，说白了就是如何存储数据、如何为存储的数据建立索引和如何更新、查询数据等技术的实现方法；InnoDB 是在 MySQL 5.5 之后成为默认的 MySQL 存储引擎；**
 
 在创建表时，InnoDB 存储引擎会根据不同的场景选择不同的列作为索引：
@@ -2702,25 +2745,138 @@ ON table_name(index_column_1,index_column_2,...);
 
 使用前缀索引的目的是为了减少索引占用的存储空间，提升查询效率。
 
+### 事务篇
 
+#### 事务的特性
 
-### 数据库ACID
+- 原子性（Atomicity）：一个事务中的所有操作，要么全部完成，要么全部不完成，不会结束在中间某个环节，而且事务在执行过程中发生错误，会被回滚到事务开始前的状态；
+- 一致性（Consistency）：是指事务操作前和操作后，数据满足完整性约束，数据库保持一致性状态。（比如转账前后总金额不变）
+- 隔离性（Isolation）：数据库允许多个并发事务同时对其数据进行读写和修改的能力，隔离性可以防止多个事务并发执行时由于交叉执行而导致数据的不一致，==因为多个事务同时使用相同的数据时，不会相互干扰==，每个事务都有一个完整的数据空间，对其他并发事务是隔离的。
+- 持久性（Durability）：事务处理结束后，对数据的修改就是永久的，即便系统故障也不会丢失。
+  
 
-- 原子性（Atomicity）： 原子性保证事务是一个原子操作，**要么全部成功执行，要么全部失败回滚。**如果事务执行过程中出现错误或中断，所有对数据库的修改将会被撤销，数据库恢复到事务开始前的状态。
+**InnoDB 引擎通过什么技术来保证事务的这四个特性的呢？**
 
-​	示例：假设 Alice 向 Bob 转账 300 元。这个转账操作可以表示为一个事务。如果转账过程中出现网络中断，	转账会被取消，两个账户的余额保持不变。
+持久性是通过 redo log （重做日志）来保证的；
+原子性是通过 undo log（回滚日志） 来保证的；
+隔离性是通过 MVCC（多版本并发控制） 或锁机制来保证的；
+一致性则是通过持久性+原子性+隔离性来保证；
 
-- 一致性（Consistency）： 一致性确保**事务的执行使数据库从一个一致状态转变到另一个一致状态**。`在事务开始前和结束后，数据库的完整性约束都得到保持，保证数据的正确性。`
+#### 并行事务会引发什么问题？
 
-​	示例：在上面的银行转账例子中，如果 Alice 转账给 Bob 300 元，那么事务结束后两个账户的余额之和应该	保持不变。
+在同时处理多个事务的时候，就可能出现脏读（dirty read）、不可重复读（non-repeatable read）、幻读（phantom read）的问题。
 
-- 隔离性（Isolation）： 隔离性确保事务的执行在逻辑上是相互隔离的，**一个事务的执行不会受其他事务的干扰**。即使多个事务同时运行，每个事务对数据的读取都不会受到其他事务的影响，保证数据的独立性。
+脏读（dirty read）：一个事务「读到」了另一个「未提交事务修改过的数据」
 
-​	示例：假设同时有两个客户端在不同的线程中尝试向 Bob 转账，一个转账 200 元，另一个转账 100 元。在隔	离性的保护下，两个客户端都应该在执行后看到正确的余额。
+不可重复读（non-repeatable read）：在一个事务内多次读取同一个数据，如果出现前后两次读到的数据不一样的情况，就意味着发生了「不可重复读」现象。
 
-- 持久性（Durability）： 持久性确保**事务一旦提交成功，对数据库的修改就是永久性的**，即使发生系统故障或重启，之前提交的事务的结果仍然保持。持久性确保了数据的持久存储。
+假设有 A 和 B 这两个事务同时在处理，事务 A 先开始从数据库中读取小林的余额数据，然后继续执行代码逻辑处理，在这过程中如果事务 B 更新了这条数据，并提交了事务，那么当事务 A 再次读取该数据时，就会发现前后两次读到的数据是不一致的，这种现象就被称为不可重复读。
+
+幻读（phantom read）：在一个事务内多次查询某个符合查询条件的「记录数量」，==如果出现前后两次查询到的记录数量不一样的情况==，就意味着发生了「幻读」现象。
+
+#### 事务隔离级别是怎么实现的？
+
+SQL 标准提出了四种隔离级别来规避以上三种现象，隔离级别越高，性能效率就越低，这四个隔离级别如下：
+
+- 读未提交（read uncommitted），指一个事务还没提交时，它做的变更就能被其他事务看到；
+- 读提交（read committed），指一个事务提交之后，它做的变更才能被其他事务看到；
+- 可重复读（repeatable read），指一个事务执行过程中看到的数据，**一直跟这个事务启动时看到的数据是一致的**，==MySQL InnoDB 引擎的默认隔离级别==；
+- 串行化（serializable ）；会对记录加上读写锁，在多个事务对这条记录进行读写操作时，如果发生了读写冲突的时候，后访问的事务必须等前一个事务执行完成，才能继续执行；
+
+这四种隔离级别具体是如何实现的呢？
+
+对于「读未提交」隔离级别的事务来说，因为可以读到未提交事务修改的数据，所以直接读取最新的数据就好了； 对于「串行化」隔离级别的事务来说，通过加读写锁的方式来避免并行访问； 对于「读提交」和「可重复读」隔离级别的事务来说，它们是通过 Read View 来实现的，它们的区别在于创建 Read View 的时机不同，==Read View 可以理解成一个数据快照==，就像相机拍照那样，定格某一时刻的风景。「读提交」隔离级别是在「每个语句执行前」都会重新生成一个 Read View，而「可重复读」隔离级别是「启动事务时」生成一个 Read View，然后整个事务期间都在用这个 Read View。
+
+#### Read View 在 MVCC 里如何工作的？
+
+MVCC（多版本并发控制）：通过「版本链」来控制并发事务访问同一个记录时的行为；用于「读提交」和「可重复读」隔离级别的实现
+
+#### MySQL 有哪些锁？
 
 ## 五、算法与数据结构
+
+### 背包总结
+
+解题思路：
+1.确定dp的含义
+2.递推公式
+3.初始化
+4.确定遍历顺序
+
+01背包问题
+
+ dp[i][j] 表示从下标为[0-i]的物品里任意取，放进容量为j的背包，价值总和最大是多少。
+ dp[i][j] = max(dp[i - 1][j], dp[i - 1][j - weight[i]] + value[i]);
+//初始化 dpvector<vector<int>> dp(weight.size(), vector<int>(bagweight + 1, 0));
+for(intj = weight[0]; j <= bagweight; j++) {
+    dp[0][j] = value[0];
+}
+
+滚动数组
+
+dp[j] = max(dp[j], dp[j - weight[i]] + value[i]);
+
+遍历顺序需要注意
+二维dp遍历的时候，背包容量是从小到大，而一维dp遍历的时候，背包是从大到小。
+
+```cpp
+for(int i = 0; i < weight.size(); i++) { // 遍历物品
+    for(int j = bagWeight; j >= weight[i]; j--) { // 遍历背包容量
+        dp[j] = max(dp[j], dp[j - weight[i]] + value[i]);
+    }
+}
+```
+
+倒序遍历是为了保证物品i只被放入一次！。但如果一旦正序遍历了，那么物品0就会被重复加入多次
+
+分割等和子集 -> 背包问题
+目标和（求方案数）
+1和0
+
+注意求最值与求方案数的区别
+
+```cpp
+class Solution {
+public:
+    int findTargetSumWays(vector<int>& nums, int S) {
+        int sum = 0;
+        for (int i = 0; i < nums.size(); i++) sum += nums[i];
+        if (abs(S) > sum) return 0; // 此时没有方案
+        if ((S + sum) % 2 == 1) return 0; // 此时没有方案
+        int bagSize = (S + sum) / 2;
+        vector<int> dp(bagSize + 1, 0);
+        dp[0] = 1;
+        for (int i = 0; i < nums.size(); i++) {
+            for (int j = bagSize; j >= nums[i]; j--) {
+                dp[j] += dp[j - nums[i]];
+            }
+        }
+        return dp[bagSize];
+    }
+};
+```
+
+完全背包问题
+
+物品无限，可以重复加入；
+无需再考虑内层循环从大到小遍历的情况；
+对于求最值问题：无需考虑双重循环的顺序
+对于求方案数量问题：考虑求排列数量（先遍历容量）还是求组合数量（先遍历物品）
+零钱兑换求最少硬币数（最值问题），求方案数量（排列数问题，先遍历物品）
+
+多重背包理论
+
+
+有N种物品和一个容量为V 的背包。第i种物品最多有Mi件可用，每件耗费的空间是Ci ，价值是Wi 求解将哪些物品装入背包可使这些物品的耗费的空间 总和不超过背包容量，且价值总和最大
+每件物品最多有Mi件可用，把Mi件摊开，其实就是一个01背包问题了
+
+打家劫舍1，2，3
+树形dp的实现思路
+
+
+状态dp
+
+买卖股票的最佳时机1，2，3，4
 
 ### [剑指 Offer 30. 包含min函数的栈](https://leetcode.cn/problems/bao-han-minhan-shu-de-zhan-lcof/)
 
@@ -3368,6 +3524,113 @@ j = 0时，表示从A[0,..i-1]编辑为空串，需要删除i个元素，dp[i][0
 原文链接：https://blog.csdn.net/gulaixiangjuejue/article/details/85249973
 
 ### 单例模式
+
+**饿汉模式： 在类加载时就创建了实例**
+
+实例对象 `instance` 被定义为 `static` 局部变量，而且是在静态成员函数 `getInstance()` 内部进行初始化
+
+```cpp
+#include <iostream>
+using namespace std;
+class Sigleton_E {
+private:
+    Sigleton_E()
+    {
+        cout << "Sigleton_E" << endl;
+    }
+
+public:
+    static Sigleton_E& getInstance()
+    {
+        static Sigleton_E instance;
+        return instance;
+    }
+    void doSomething()
+    {
+        cout << "Sigleton_E is doing something." << endl;
+    }
+    Sigleton_E operator=(const Sigleton_E&) = delete;
+    Sigleton_E(const Sigleton_E&) = delete;
+};
+
+// Sigleton_E Sigleton_E::instance;
+int main()
+{
+    Sigleton_E& instance1 = Sigleton_E::getInstance();
+    Sigleton_E& instance2 = Sigleton_E::getInstance();
+    instance1.doSomething();
+    instance2.doSomething();
+    instance1 = instance2;
+    cout << "instance1:" << &instance1 << "  instance2:" << &instance2 << endl;
+    return 0;
+}
+/*
+Sigleton_E
+Sigleton_E is doing something.
+Sigleton_E is doing something.
+instance1:0xd81700  instance2:0xd81700
+*/
+```
+
+**懒汉模式： 单例实例在第一次使用时才会被创建，线程不安全，需要加入互斥锁保证线程安全；**
+
+**懒汉模式**中的 `static Singleton* instance` 并不会在类加载时创建。它只是一个==指针==，它的初始值为 `nullptr`，表示还没有创建实际的单例实例。
+
+```cpp
+#include <iostream>
+#include <mutex>
+
+class Singleton {
+private:
+    static Singleton* instance;
+    static std::mutex mtx;
+
+    Singleton()
+    {
+        std::cout << "Singleton instance created." << std::endl;
+    }
+
+public:
+    static Singleton* getInstance()
+    {
+        if (!instance) {
+            std::lock_guard<std::mutex> lock(mtx);
+            if (!instance) {
+                instance = new Singleton();
+            }
+        }
+        return instance;
+    }
+
+    void doSomething()
+    {
+        std::cout << "Singleton is doing something." << std::endl;
+    }
+};
+
+Singleton* Singleton::instance = nullptr;
+std::mutex Singleton::mtx;
+
+int main()
+{
+    Singleton* instance1 = Singleton::getInstance();
+    Singleton* instance2 = Singleton::getInstance();
+
+    instance1->doSomething();
+    instance2->doSomething();
+
+    if (instance1 == instance2) {
+        std::cout << "Both instances are the same." << std::endl;
+    } else {
+        std::cout << "Instances are different." << std::endl;
+    }
+    std::cout << "instance1:" << instance1 << "  instance2:" << instance2 << std::endl;
+    return 0;
+}
+
+```
+
+
 
 ### 场景题
 
@@ -4403,3 +4666,112 @@ int main() {
 
 ```
 
+
+
+## cmake
+- **gcc**
+
+它是GNU Compiler Collection（就是GNU编译器套件），也可以简单认为是编译器，它可以编译很多种编程语言（括C、C++、Objective-C、Fortran、Java等等）。
+
+- make
+
+make工具可以看成是一个智能的批处理工具，它本身并没有编译和链接的功能，而是用类似于批处理的方式—通过调用makefile文件中用户指定的命令来进行编译和链接的。
+
+- makefile
+
+简单的说就像一首歌的乐谱，make工具就像指挥家，指挥家根据乐谱指挥整个乐团怎么样演奏，make工具就根据makefile中的命令进行编译和链接的。makefile命令中就包含了调用gcc（也可以是别的编译器）去编译某个源文件的命令。
+
+- cmake
+
+cmake根据一个叫CMakeLists.txt文件,可以更加简单的生成makefile文件给上面那个make用,能够跨平台生成对应平台能用的makefile，无需手动修改。
+
+
+### makefile编写
+
+**文件目录树**
+
+```shell
+makefile_t/
+├──main.cpp
+├──factorial.cpp
+├──printhello.cpp
+└──functions.h
+```
+
+**version1**
+```shell
+hello: main.cpp printhello.cpp factorial.cpp
+	g++ -o hello main.cpp printhello.cpp factorial.cpp
+```
+
+**version2**
+```shell
+CXX = g++
+TARGET = hello 
+OBJ = main.o printhello.o factorial.o
+
+$(TARGET): $(OBJ)
+	$(CXX) -o $(TARGET) $(OBJ)
+
+main.o: main.cpp
+	$(CXX) -c main.cpp
+
+printhello.o: printhello.cpp
+	$(CXX) -c printhello.cpp
+
+factorial.o: factorial.cpp
+	$(CXX) -c factorial.cpp
+```
+
+**version3**
+```shell
+CXX = g++
+TARGET = hello 
+OBJ = main.o printhello.o factorial.o
+
+CXXFLAGS = -c -Wall
+
+$(TARGET): $(OBJ)
+	$(CXX) -o $@ $^
+
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) $< -o $@
+
+.PHONY: clean
+clean:
+	rm -f *.o $(TARGET)
+```
+
+**version4**
+```shell
+CXX = g++
+TARGET = hello 
+SRC = $(wildcard *.cpp)
+OBJ = $(patsubst %.cpp, %.o, $(SRC))
+
+CXXFLAGS = -c -Wall
+
+$(TARGET): $(OBJ)
+	$(CXX) -o $@ $^
+
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) $< -o $@
+
+.PHONY: clean
+clean:
+	rm -f *.o $(TARGET)
+```
+
+.PHONY，makefile的特殊变量，用于生成“伪目标”。make中的“目标”通常指文件，但有时功能和文件名会重叠。以clean为例，我们需要clean来清除全部的中间文件，但同时我们不需要真的生成一个名为"clean"文件，所以当目标文件夹存在一个“clean”文件时，“clean”功能就不会被执行，所以需要一个"伪目标"去执行“clean”功能。
+
+wildcard，用于防止通配符解析失败。使变量定义时，括号里的通配符仍然生效。
+
+patsubst，用于防止替换文件解析失效。替换文件后缀。
+
+### **CMakeLists.txt编写**
+
+```shell
+cmake_minimum_required(VERSION 3.0.0)
+project(makefile_t)
+add_executable(main ./src/main.cpp ./src/factorial.cpp ./src/printhello.cpp)
+```
