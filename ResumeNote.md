@@ -3416,7 +3416,7 @@ public:
 
 
 
-### 最长无重复字串
+### 最长无重复子串
 
 ```cpp
 class Solution {
