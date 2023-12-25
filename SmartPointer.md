@@ -448,3 +448,179 @@ b use count : 2
 通过这次结果可以看到，CA和CB的对象都被正常的析构了，引用关系如下图所示，流程与上一例子相似，但是不同的是④这条引用是通过weak_ptr建立的，并不会增加引用计数，也就是说CA的对象只有一个引用计数，而CB的对象只有2个引用计数，当test_refer_to_each_other这个函数返回时，对象ptr_a和ptr_b被销毁，也就是①③两条引用会被断开，此时CA对象的引用计数会减为0，对象被销毁，其内部的m_ptr_b成员变量也会被析构，导致CB对象的引用计数会减为0，对象被销毁，进而解决了引用成环的问题。
 
 ![](https://gitee.com/juzihhu/image_bed/raw/master/img/202303091116170.png)
+
+# 用户自定义排序规则
+
+
+
+
+```cpp
+#include <iostream>
+#include <algorithm>
+#include <vector>
+#include <string>
+class Example {
+public:
+    //利用仿函数自定义排序规则
+    bool operator()(const std::string& a, const std::string& b){
+        return a.size()<b.size();
+    }  
+
+};
+
+int main() {
+    std::vector<std::string> vec = {"apple", "banana", "cherry", "date"};
+    // bool operator()(const std::string& a, const std::string& b){
+    std:: sort(vec.begin(),vec.end(),Example());
+    f or (const auto& s : vec) {
+        std::cout << s << " ";
+    }
+    std::cout << std::endl;
+    return 0;
+}
+```
+
+```cpp
+// 重写排序方法自定义排序规则
+bool sortByLength(const std::string& a, const std::string& b) {
+    return a.size() > b.size();
+}
+int main() {
+    std::sort(vec.begin(), vec.end(),sortByLength);
+}
+
+
+```
+
+
+
+
+```cpp
+// 重载运算符<
+bool operator<(const std::string& a, const std::string& b){
+    return a.size() < b.size(); //按照字符串长度从小到大排序
+}
+int main() {
+    std::vector<std::string> vec = {"apple", "banana", "cherry", "date"};
+    std:: sort(vec.begin(),vec.end());
+    for (const auto& s : vec) {
+        std::cout << s << " ";
+    }
+    std::cout << std::endl;
+    return 0;
+}
+```
+
+```cpp
+#include <iostream>
+#include <algorithm>
+#include <vector>
+#include <string>
+class Example {
+public:
+    static bool sortByLength(const std::string& a, const std::string& b) {
+        return a.size() > b.size();
+    }
+};
+int main() {
+    std::vector<std::string> vec = {"appl", "banana", "cherry", "date"};
+    Example obj;
+    std::sort(vec.begin(), vec.end(), obj.sortByLength);
+    for (const auto& s : vec) {
+        std::cout << s << " ";
+    }
+    std::cout << std::endl;
+    return 0;
+}
+```
+
+**重定义map内部的Compare函数，按照键字符串长度大小进行排序**
+
+```cpp
+#include <map>
+#include <string>
+#include <iostream>
+using namespace std;
+// 自己编写的Compare，实现按照字符串长度进行排序
+struct CmpByKeyLength {  
+  bool operator()(const string& k1, const string& k2) {  
+    return k1.length() < k2.length();  
+  }  
+};  
+int main(){
+    map<string, int, CmpByKeyLength > mapStudent;  //这里注意要换成自己定义的compare
+    mapStudent["LiMin"]=90;
+    mapStudent["ZiLinMi"]=72;
+    mapStudent["BoB"]=79;
+    map<string, int>::iterator iter=mapStudent.begin();
+    for(iter=mapStudent.begin();iter!=mapStudent.end();iter++){
+        cout<<iter->first<<" "<<iter->second<<endl;
+    }
+    return 0;
+}
+```
+
+
+
+# 逗号运算符
+
+下面这段代码主要作用是用递归函数Perm生成1到n的全排列。
+
+while (cin >> n, n) 这行代码是一个常见的用于输入多组数据的方式，它的作用是在输入求解的数据时，如果输入的数字n为0，则结束输入数据，即只执行一次，否则，将执行输入数据和Perm(0, n, a)函数调用，生成全排列。
+
+Perm(int start, end, a[]) 是一个递归函数，它用于生成a数组中从下标start到end-1的元素的全排列。此处该函数的起始调用参数start为0，end为n，a为用于存放生成的全排列的数组。
+
+for (i = 0; i < n; i++) { a[i] = i + 1; } 用于初始化a数组。创建长度为n的数字数组，并将数组中的元素赋值为1到n的依次递增的数字。这一行代码相当于将排列的初始值设定为了这个数字数组。
+
+最后的 return 0; 表示程序正常结束。
+
+```cpp
+void Perm(int start, int end, int a[]) {
+  //some recursion code
+}
+int main() {
+   int i, n, a[10];
+   while (cin >> n, n) {
+      for (i = 0; i < n; i++)
+      {
+         a[i] = i + 1;
+      }
+      Perm(0, n, a);
+   }
+   return 0;
+}
+```
+
+**while (cin >> n, n)与while (cin >> n)的区别**
+
+while (cin >> n, n) 和 while (cin >> n) 的区别在于前者使用了逗号运算符。逗号运算符的作用是执行多个表达式并返回最后一个表达式的值，它的优先级是最低的。
+
+在while (cin >> n, n)中，首先执行 cin >> n ，如果读入的n不为0（实际上是非空），则继续执行，将n的值赋给n变量。如果读入的n是0（或者是其他能转换成false的值），那么逗号运算符的优先级低，所以 while 循环结束。
+
+而在 while (cin >> n) 中，只有当输入流输入的数据能够转换成非0的值（即为true）时才会执行循环体。当输入的数据不是数字类型的、或者为0时，循环将会结束。
+
+因此，while (cin >> n, n) 和 while (cin >> n) 的执行结果不同，前者能够更准确地判断是否读取到了正确的数据。
+
+**如何理解：逗号运算符的作用是执行多个表达式并返回最后一个表达式的值，它的优先级是最低的。**
+
+逗号运算符是一种二元运算符，它用逗号分隔两个表达式，将两个表达式串联起来组成一个新的表达式。其语法为：`expression1, expression2`。
+
+逗号运算符会首先执行expression1，然后再执行expression2，并且返回expression2的值作为运算结果。因此，逗号运算符的作用是执行多个表达式，并返回最后一个表达式的结果。
+
+下面是一个简单的例子，可以帮助理解逗号运算符的作用和优先级：
+
+```cpp
+Copy codeint a = 1, b = 2, c = 3;
+
+int result = (a + b, b + c, c + a); // 等价于 result = c + a;
+
+// 逗号运算符的优先级是最低的，上述表达式相当于以下代码：
+
+a + b; // 第一个表达式
+b + c; // 第二个表达式
+result = c + a; // 第三个表达式
+```
+
+在上述示例中，逗号运算符连接了三个表达式，但是它只返回最后一个表达式的结果值，即 `c + a` 的值为 4，赋值给了 `result` 变量。
+
+需要注意的是，虽然逗号运算符的优先级是最低的，但是在表达式中可以使用括号来改变表达式的执行顺序。例如上面的示例中，使用括号改变了逗号运算符的执行顺序。

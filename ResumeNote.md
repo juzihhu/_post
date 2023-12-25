@@ -1,3 +1,11 @@
+---
+title: pytorch+gpu 环境配置
+date: 2023-0904 15:23:34
+tags: 
+categories:  简历问题总结
+cover:  https://w.wallhaven.cc/full/p9/wallhaven-p9o51m.png
+---
+<!-- more -->   
 <meta name="referrer" content="no-referrer"/>
 
 Summary
@@ -1130,6 +1138,14 @@ int main() {
 ```
 
 
+
+在计算机科学中，闭包（closure）是指一个函数，它包含了它所在作用域中的变量。lambda表达式是一种匿名函数，可以捕获它所在作用域中的变量。因此，lambda表达式可以被认为是闭包。
+
+以下是闭包的几个应用场景：
+
+- 回调函数：闭包可以用来实现回调函数。回调函数是一种在某个事件发生时被调用的函数。
+- 延迟求值：闭包可以用来实现延迟求值。延迟求值是一种在需要时才计算表达式的值的技术。
+- 函数式编程：闭包是函数式编程的基础。函数式编程是一种基于函数的编程范式。
 
 ### `auto`和`decltype`的区别
 
@@ -4369,6 +4385,10 @@ void SqlConnPool::FreeConn(MYSQL* sql) {
 举例：
 
 `volatile` 的作用是告诉编译器不要对 `flag` 变量进行优化，确保在多线程环境中对 `flag` 的读取和写入不会被编译器重排或优化掉。这可以解决可见性问题，因为它确保了一个线程对 `flag` 的修改对其他线程是可见的。
+
+
+
+https://zhuanlan.zhihu.com/p/552580039
 
 ## 七、自我介绍
 
